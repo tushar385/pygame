@@ -140,12 +140,6 @@
         <img id="startImage" src="start.png" alt="Start" style="width: 200px; height: 150px; margin: 20px; border: 2px solid #000; border-radius: 10px;">
         <p>Tap to Start Playing!</p>
         <div style="color: #fff; font-size: 0.9em; margin: 10px 0;">Tap anywhere to jump</div>
-        
-        <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 15px;">
-            <h3 style="margin-bottom: 15px; color: #FFD700;">📱 Install as App</h3>
-            <p style="margin-bottom: 15px; font-size: 1em;">Get the full mobile experience!</p>
-            <a href="#" class="install-btn" onclick="showInstallInfo()">📲 Install on Phone</a>
-        </div>
     </div>
     
     <div class="game-over-screen hidden" id="gameOverScreen">
@@ -538,10 +532,7 @@
             startGame();
         }
         
-        function showInstallInfo() {
-            alert('📱 How to Install as App:\n\n1. Open this game in Chrome/Safari\n2. Tap "Share" or "Menu" button\n3. Select "Add to Home Screen"\n4. Tap "Add"\n\nNow you have a real app icon on your phone! 🎮');
-        }
-        
+                
         // Event listeners - Enhanced mobile controls
         canvas.addEventListener('click', handleTap);
         
