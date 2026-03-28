@@ -544,18 +544,36 @@
         
         // Event listeners - Enhanced mobile controls
         canvas.addEventListener('click', handleTap);
+        
+        // Enhanced touch events for mobile
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             handleTap();
         });
         
-        // Add touch events to entire body for better mobile experience
-        document.body.addEventListener('touchstart', (e) => {
-            if (e.target === document.body || e.target === canvas) {
-                e.preventDefault();
-                handleTap();
-            }
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
         });
+        
+        // Add touch events to entire body for better mobile experience
+        document.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleTap();
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        // Prevent default touch behaviors
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false });
         
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
@@ -566,15 +584,6 @@
                 restartGame();
             }
         });
-        
-        // Prevent scrolling and zooming on mobile
-        document.body.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-        }, { passive: false });
-        
-        document.body.addEventListener('touchend', (e) => {
-            e.preventDefault();
-        }, { passive: false });
         
         // Initialize
         loadImages();
