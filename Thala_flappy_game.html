@@ -115,8 +115,6 @@
 <body>
     <canvas id="gameCanvas"></canvas>
     
-    <div class="score hidden" id="score">0</div>
-    
     <div class="start-screen" id="startScreen">
         <h1>🏏 Flappy Dhoni</h1>
         <img id="startImage" src="start.png" alt="Start" style="width: 200px; height: 150px; margin: 20px; border: 2px solid #000; border-radius: 10px;">
@@ -137,7 +135,6 @@
         const ctx = canvas.getContext('2d');
         const startScreen = document.getElementById('startScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
-        const scoreElement = document.getElementById('score');
         const finalScoreElement = document.getElementById('finalScore');
         const startImage = document.getElementById('startImage');
         const gameOverImage = document.getElementById('gameOverImage');
@@ -170,6 +167,7 @@
         let score = 0;
         let frameCount = 0;
         let passedPipes = [];
+        let gameOverTime = 0;
         
         // Scale factor for mobile
         let scaleFactor = 1;
@@ -414,10 +412,7 @@
                    rect1.y + rect1.height > rect2.y;
         }
         
-        function updateScore() {
-            scoreElement.textContent = score;
-        }
-        
+                
         function gameLoop() {
             if (!gameStarted || gameOver) return;
             
@@ -455,7 +450,6 @@
                 if (x + pipe_width < player.x && !passedPipes.includes(pipe)) {
                     score += 2;
                     passedPipes.push(pipe);
-                    updateScore();
                 }
             }
             
@@ -487,9 +481,7 @@
             
             startScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
-            scoreElement.classList.remove('hidden');
             
-            updateScore();
             playBackgroundMusic();
             gameLoop();
         }
@@ -500,14 +492,18 @@
             } else if (gameStarted && !gameOver) {
                 jump();
             } else if (gameOver) {
-                restartGame();
+                // Check if 2 seconds have passed since game over
+                const timeSinceGameOver = Date.now() - gameOverTime;
+                if (timeSinceGameOver >= 2000) { // 2000ms = 2 seconds
+                    restartGame();
+                }
             }
         }
         
         function endGame() {
             finalScoreElement.textContent = `Score: ${score}`;
             gameOverScreen.classList.remove('hidden');
-            scoreElement.classList.add('hidden');
+            gameOverTime = Date.now(); // Record when game ended
         }
         
         function restartGame() {
