@@ -133,15 +133,24 @@
         <p>Tap to Start Playing!</p>
         <div style="color: #fff; font-size: 0.9em; margin: 10px 0;">Tap anywhere to jump</div>
         <div style="color: #ffeb3b; font-size: 0.8em; margin: 15px 0; font-weight: bold;">📱 Play Horizontally for better experience!</div>
-        <div style="margin-top: 20px;">
-            <button class="btn" onclick="showLeaderboard()">🏆 Leaderboard</button>
-        </div>
     </div>
     
     <div class="game-over-screen hidden" id="gameOverScreen">
         <img id="gameOverImage" src="image.png" alt="Game Over" style="width: 300px; height: 200px; margin: 20px; border: 2px solid #000; border-radius: 10px;">
         <h1>GAME OVER!</h1>
         <p id="finalScore">Score: 0</p>
+        
+        <!-- Default Leaderboard Preview -->
+        <div id="gameOverLeaderboard" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin: 15px 0; max-height: 200px; overflow-y: auto;">
+            <p style="color: #fff; font-size: 14px;">🏆 Top Scores</p>
+            <div id="gameOverLeaderboardContent" style="font-size: 12px; color: #fff;">
+                Loading scores...
+            </div>
+        </div>
+        
+        <div style="margin: 15px 0;">
+            <button class="btn" onclick="showLeaderboard()">🏆 Full Leaderboard</button>
+        </div>
         <button class="btn" onclick="restartGame()">Tap to Restart</button>
         <div style="color: #fff; font-size: 0.9em;">Tap anywhere to restart</div>
     </div>
@@ -165,6 +174,7 @@
         const playerNameInput = document.getElementById('playerNameInput');
         const currentPlayerElement = document.getElementById('currentPlayer');
         const leaderboardContent = document.getElementById('leaderboardContent');
+        const gameOverLeaderboardContent = document.getElementById('gameOverLeaderboardContent');
         const startImage = document.getElementById('startImage');
         const gameOverImage = document.getElementById('gameOverImage');
         
@@ -180,8 +190,32 @@
         };
         
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        let db = null;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            console.log('✅ Firebase initialized successfully!');
+            console.log('🔥 Firebase project:', firebaseConfig.projectId);
+            console.log('📊 Database connection:', db ? 'Connected' : 'Failed');
+            
+            // Test database connection
+            db.collection('test').add({
+                test: 'connection_test',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                console.log('✅ Firebase database write test successful!');
+                // Clean up test document
+                db.collection('test').limit(1).get().then(snapshot => {
+                    snapshot.docs.forEach(doc => doc.ref.delete());
+                });
+            }).catch(error => {
+                console.error('❌ Firebase database write test failed:', error);
+            });
+            
+        } catch (error) {
+            console.error('❌ Firebase initialization failed:', error);
+            console.log('🔄 Falling back to localStorage only');
+        }
         
         // Player data
         let playerName = '';
@@ -243,18 +277,87 @@
             showStartScreen();
         }
         
+        // Test function for manual score submission
+        function testScoreSubmission() {
+            const testScore = Math.floor(Math.random() * 50) + 10; // Random score 10-60
+            console.log(`🧪 Testing score submission: ${playerName} - ${testScore}`);
+            submitScore(playerName, testScore);
+            
+            // Show feedback
+            currentPlayerElement.textContent = `Test submitted: ${testScore}`;
+            setTimeout(() => {
+                currentPlayerElement.textContent = `Playing as: ${playerName}`;
+            }, 2000);
+        }
+        
+        // Manual score submission for game over
+        function manualSubmitScore() {
+            console.log(`💾 Manual submission attempt:`);
+            console.log(`- playerName: "${playerName}"`);
+            console.log(`- score: ${score}`);
+            console.log(`- playerName type: ${typeof playerName}`);
+            console.log(`- score type: ${typeof score}`);
+            console.log(`- score > 0: ${score > 0}`);
+            console.log(`- playerName length: ${playerName.length}`);
+            
+            if (playerName && score > 0) {
+                console.log(`✅ Conditions passed, calling submitScore...`);
+                submitScore(playerName, score);
+                alert(`Score ${score} submitted to leaderboard!`);
+            } else {
+                console.log(`❌ Conditions failed:`);
+                if (!playerName) console.log(`- playerName is falsy: ${playerName}`);
+                if (score <= 0) console.log(`- score is <= 0: ${score}`);
+                alert('Cannot submit score: No name or zero score');
+            }
+        }
+        
         // Leaderboard functions
         async function submitScore(name, score) {
+            if (!db) {
+                console.log('❌ Firebase not available - using localStorage fallback');
+                // Fallback: Save to localStorage
+                try {
+                    let localScores = JSON.parse(localStorage.getItem('flappyDhoniLocalScores') || '[]');
+                    localScores.push({
+                        name: name,
+                        score: score,
+                        date: new Date().toLocaleDateString()
+                    });
+                    localStorage.setItem('flappyDhoniLocalScores', JSON.stringify(localScores));
+                    console.log('✅ Score saved locally (Firebase unavailable)');
+                } catch (localError) {
+                    console.error('❌ Even local save failed:', localError);
+                }
+                return;
+            }
+            
             try {
+                console.log(`🔥 Attempting Firebase submit: ${name} - ${score}`);
                 await db.collection('leaderboard').add({
                     name: name,
                     score: score,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     date: new Date().toLocaleDateString()
                 });
-                console.log('Score submitted successfully');
+                console.log('✅ Score submitted successfully to Firebase!');
             } catch (error) {
-                console.error('Error submitting score:', error);
+                console.error('❌ Firebase submit failed:', error);
+                console.log('🔄 Falling back to localStorage');
+                
+                // Fallback: Save to localStorage
+                try {
+                    let localScores = JSON.parse(localStorage.getItem('flappyDhoniLocalScores') || '[]');
+                    localScores.push({
+                        name: name,
+                        score: score,
+                        date: new Date().toLocaleDateString()
+                    });
+                    localStorage.setItem('flappyDhoniLocalScores', JSON.stringify(localScores));
+                    console.log('✅ Score saved locally as fallback');
+                } catch (localError) {
+                    console.error('❌ Even local save failed:', localError);
+                }
             }
         }
         
@@ -600,8 +703,19 @@
                 ctx.drawImage(faceImg, player.x * scaleFactor, player.y * scaleFactor, 70 * scaleFactor, 60 * scaleFactor);
             }
             
+            // Check collision
             if (check_collision(pipes, player.x, player.y) && !gameOver) {
-                console.log("GAME OVER - Score:", score);
+                console.log("💥 GAME OVER - Score:", score, "Player:", playerName);
+                gameOver = true;
+                stopBackgroundMusic();
+                playGameOverSound();
+                endGame();
+                return;
+            }
+            
+            // Check boundary collision
+            if (player.y < 0 || player.y > HEIGHT - 60) {
+                console.log("💥 BOUNDARY HIT - Score:", score, "Player:", playerName);
                 gameOver = true;
                 stopBackgroundMusic();
                 playGameOverSound();
@@ -669,9 +783,77 @@
             gameOverScreen.classList.remove('hidden');
             gameOverTime = Date.now(); // Record when game ended
             
-            // Submit score to leaderboard
-            if (playerName && score > 0) {
-                submitScore(playerName, score);
+            console.log(`🎮 endGame() called:`);
+            console.log(`- playerName: "${playerName}"`);
+            console.log(`- score: ${score}`);
+            console.log(`- playerName length: ${playerName.length}`);
+            console.log(`- score > 0: ${score > 0}`);
+            
+            // Load game over leaderboard preview
+            loadGameOverLeaderboard();
+            
+            // Submit score to leaderboard automatically with slight delay
+            setTimeout(() => {
+                if (playerName && score > 0) {
+                    console.log(`🚀 Auto-submitting score: ${playerName} - ${score}`);
+                    submitScore(playerName, score);
+                    // Refresh leaderboard after submission
+                    setTimeout(loadGameOverLeaderboard, 1000);
+                } else {
+                    console.log(`❌ Auto-submit skipped - conditions not met`);
+                    if (!playerName) console.log(`- No playerName: ${playerName}`);
+                    if (score <= 0) console.log(`- Zero or negative score: ${score}`);
+                }
+            }, 500); // 500ms delay to ensure everything is loaded
+        }
+        
+        // Load game over leaderboard preview (top 5)
+        async function loadGameOverLeaderboard() {
+            try {
+                gameOverLeaderboardContent.innerHTML = 'Loading...';
+                
+                const snapshot = await db.collection('leaderboard')
+                    .orderBy('score', 'desc')
+                    .orderBy('timestamp', 'desc')
+                    .limit(20)
+                    .get();
+                
+                const scores = [];
+                snapshot.forEach(doc => {
+                    scores.push(doc.data());
+                });
+                
+                // Remove duplicates (keep highest score per player)
+                const uniqueScores = {};
+                scores.forEach(entry => {
+                    if (!uniqueScores[entry.name] || entry.score > uniqueScores[entry.name].score) {
+                        uniqueScores[entry.name] = entry;
+                    }
+                });
+                
+                // Sort and get top 5
+                const topScores = Object.values(uniqueScores)
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 5);
+                
+                // Display compact leaderboard
+                let html = '';
+                if (topScores.length === 0) {
+                    html = '<p style="color: #aaa;">No scores yet!</p>';
+                } else {
+                    topScores.forEach((entry, index) => {
+                        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                        const isCurrentPlayer = entry.name === playerName;
+                        const highlight = isCurrentPlayer ? 'style="color: #ffeb3b; font-weight: bold;"' : 'style="color: #fff;"';
+                        html += `<p ${highlight}>${medal} ${entry.name}: ${entry.score}</p>`;
+                    });
+                }
+                
+                gameOverLeaderboardContent.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading game over leaderboard:', error);
+                gameOverLeaderboardContent.innerHTML = '<p style="color: #ff6b6b;">Error loading scores</p>';
             }
         }
         
