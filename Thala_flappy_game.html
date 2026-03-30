@@ -466,7 +466,8 @@ document.addEventListener('touchstart', e => {
     if (gameStarted && !gameOver) { e.preventDefault(); handleTap(e); }
 }, { passive: false });
 startScreen.addEventListener('touchstart', e => {
-    if (e.target.tagName !== 'BUTTON') e.preventDefault();
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+    e.preventDefault();
 });
 document.addEventListener('touchmove', e => { if (gameStarted) e.preventDefault(); }, { passive: false });
 document.addEventListener('keydown', e => {
