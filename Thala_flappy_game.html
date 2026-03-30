@@ -482,18 +482,18 @@
                 const scaleX = screenWidth / WIDTH;
                 const scaleY = screenHeight / HEIGHT;
                 
-                // Use the larger scale to fill more screen
-                scaleFactor = Math.max(scaleX, scaleY);
+                // For smaller screens like Realme, use more aggressive scaling
+                const isSmallScreen = screenWidth <= 400 || screenHeight <= 700;
                 
-                // Adjust game dimensions for mobile
-                if (scaleX > scaleY) {
-                    // Width is limiting factor
-                    scaleFactor = scaleX * 0.95; // Use 95% of width
+                if (isSmallScreen) {
+                    // Small phones: Use maximum possible scale
+                    scaleFactor = Math.max(scaleX, scaleY) * 1.2; // 120% for small screens
                 } else {
-                    // Height is limiting factor
-                    scaleFactor = scaleY * 0.95; // Use 95% of height
+                    // Larger phones: Use normal scaling
+                    scaleFactor = Math.max(scaleX, scaleY) * 0.95; // 95% for larger screens
                 }
                 
+                console.log(`📱 ${isSmallScreen ? 'Small' : 'Large'} screen detected`);
                 console.log(`📱 Mobile scale factor: ${scaleFactor.toFixed(2)}`);
                 console.log(`📐 Screen: ${screenWidth}x${screenHeight} vs Game: ${WIDTH}x${HEIGHT}`);
                 console.log(`📏 Scale ratios - X: ${scaleX.toFixed(2)}, Y: ${scaleY.toFixed(2)}`);
