@@ -328,15 +328,23 @@ function checkCollision() {
 }
 
 // ── Game loop ─────────────────────────────────────────────────────────────────
-function gameLoop() {
+let lastTime = 0;
+let elapsed = 0;
+
+function gameLoop(timestamp) {
     if (!gameStarted || gameOver) return;
-    const gMult = frameCount < 120 ? 0.3 : 1.0;
-    vy += GRAVITY * gMult; py += vy;
+
+    const dt = Math.min((timestamp - lastTime) / 16.67, 2.5);
+    lastTime = timestamp;
+    elapsed += timestamp - (lastTime - dt * 16.67);
+
+    const gMult = elapsed < 1500 ? 0.3 : 1.0; // slow gravity for 1.5 seconds only
+    vy += GRAVITY * gMult * dt; py += vy * dt;
 
     if (frameCount === 30) spawnPipe();
     else if (frameCount > 30 && (frameCount - 30) % 90 === 0) spawnPipe();
 
-    for (const p of pipes) p.x -= PIPE_SPD;
+    for (const p of pipes) p.x -= PIPE_SPD * dt;
     pipes = pipes.filter(p => p.x + PIPE_W > -10);
 
     drawBg(); drawPipes(); drawPlayer(); drawScore();
@@ -393,6 +401,7 @@ function startGame() {
     gameOverScreen.classList.add('hidden');
     playBg();
     if (raf) cancelAnimationFrame(raf);
+    lastTime = 0; elapsed = 0;
     raf = requestAnimationFrame(gameLoop);
 }
 
