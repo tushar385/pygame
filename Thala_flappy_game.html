@@ -109,7 +109,7 @@
 <!-- START SCREEN -->
 <div class="start-screen" id="startScreen">
     <h1>🏏 Flappy Dhoni</h1>
-    <img src="start.png" alt="Start" style="width:180px;height:135px;margin:12px;border:2px solid #000;border-radius:10px;">
+    <img src="start.png" alt="Start" style="width:280px;height:210px;margin:12px;border:2px solid #000;border-radius:10px;">
     <p>Enter your name to play!</p>
     <input type="text" id="nameInput" placeholder="Your name..." maxlength="16" autocomplete="off">
     <button class="btn" id="startBtn">▶ Start Playing!</button>
@@ -122,7 +122,7 @@
 
 <!-- GAME OVER SCREEN -->
 <div class="game-over-screen hidden" id="gameOverScreen">
-    <img src="image.png" alt="Game Over" style="width:260px;height:175px;margin:8px;border:2px solid #000;border-radius:10px;">
+    <img src="image.png" alt="Game Over" style="width:300px;height:200px;margin:8px;border:2px solid #000;border-radius:10px;">
     <h1 style="font-size:1.4em;margin-bottom:4px;">GAME OVER!</h1>
     <p id="finalScore" style="font-size:1.1em;"></p>
     <button class="btn" id="restartBtn" disabled style="opacity:0.5;cursor:not-allowed;">
@@ -439,7 +439,8 @@ document.getElementById('restartBtn').addEventListener('click', e => { e.stopPro
 canvas.addEventListener('click', handleTap);
 document.addEventListener('touchstart', e => { if (gameStarted && !gameOver) { e.preventDefault(); handleTap(e); } }, { passive: false });
 startScreen.addEventListener('touchstart', e => {
-    if (['IMG','P','H1','DIV'].includes(e.target.tagName)) { e.preventDefault(); handleTap(e); }
+    if (e.target.tagName === 'BUTTON') return;
+    e.preventDefault();
 });
 document.addEventListener('touchmove', e => { if (gameStarted) e.preventDefault(); }, { passive: false });
 document.addEventListener('keydown', e => {
