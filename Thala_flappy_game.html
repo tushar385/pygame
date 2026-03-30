@@ -120,29 +120,21 @@
 <body>
     <canvas id="gameCanvas"></canvas>
     
-    <!-- Name Input Screen -->
-    <div class="name-screen" id="nameScreen">
+    <!-- Start Screen with Name Input -->
+    <div class="start-screen" id="startScreen">
         <h1>🏏 Flappy Dhoni</h1>
-        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin: 20px;">
-            <h2 style="color: #fff; margin-bottom: 15px;">Enter Your Name</h2>
-            <input type="text" id="playerNameInput" placeholder="Your name..." maxlength="20" 
-                   style="padding: 10px; font-size: 16px; border: none; border-radius: 5px; width: 200px; margin-bottom: 15px;">
+        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin: 10px;">
+            <input type="text" id="playerNameInput" placeholder="Enter your name..." maxlength="20" 
+                   style="padding: 8px; font-size: 14px; border: none; border-radius: 5px; width: 180px; margin-bottom: 10px;">
             <br>
-            <button class="btn" onclick="savePlayerName()">Start Playing</button>
-            <div style="color: #ffeb3b; font-size: 0.8em; margin-top: 15px;">📱 Play Horizontally for better experience!</div>
+            <span id="currentPlayer" style="color: #ffeb3b; font-size: 12px;">Guest Player</span>
         </div>
-    </div>
-    
-    <!-- Start Screen -->
-    <div class="start-screen hidden" id="startScreen">
-        <h1>🏏 Flappy Dhoni</h1>
         <img id="startImage" src="start.png" alt="Start" style="width: 200px; height: 150px; margin: 20px; border: 2px solid #000; border-radius: 10px;">
         <p>Tap to Start Playing!</p>
         <div style="color: #fff; font-size: 0.9em; margin: 10px 0;">Tap anywhere to jump</div>
         <div style="color: #ffeb3b; font-size: 0.8em; margin: 15px 0; font-weight: bold;">📱 Play Horizontally for better experience!</div>
         <div style="margin-top: 20px;">
             <button class="btn" onclick="showLeaderboard()">🏆 Leaderboard</button>
-            <button class="btn" onclick="changeName()" style="margin-left: 10px;">✏️ Change Name</button>
         </div>
     </div>
     
@@ -166,12 +158,12 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const nameScreen = document.getElementById('nameScreen');
         const startScreen = document.getElementById('startScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
         const leaderboardScreen = document.getElementById('leaderboardScreen');
         const finalScoreElement = document.getElementById('finalScore');
         const playerNameInput = document.getElementById('playerNameInput');
+        const currentPlayerElement = document.getElementById('currentPlayer');
         const leaderboardContent = document.getElementById('leaderboardContent');
         const startImage = document.getElementById('startImage');
         const gameOverImage = document.getElementById('gameOverImage');
@@ -205,9 +197,11 @@
             const saved = localStorage.getItem('flappyDhoniPlayerName');
             if (saved) {
                 playerName = saved;
-                showStartScreen();
+                playerNameInput.value = playerName;
+                currentPlayerElement.textContent = `Playing as: ${playerName}`;
             } else {
-                showNameScreen();
+                playerName = 'Guest Player';
+                currentPlayerElement.textContent = 'Guest Player';
             }
         }
         
@@ -216,32 +210,18 @@
             if (name.length > 0) {
                 playerName = name;
                 localStorage.setItem('flappyDhoniPlayerName', playerName);
-                showStartScreen();
+                currentPlayerElement.textContent = `Playing as: ${playerName}`;
             }
         }
         
-        function changeName() {
-            localStorage.removeItem('flappyDhoniPlayerName');
-            showNameScreen();
-        }
-        
         // Screen management
-        function showNameScreen() {
-            nameScreen.classList.remove('hidden');
-            startScreen.classList.add('hidden');
-            gameOverScreen.classList.add('hidden');
-            leaderboardScreen.classList.add('hidden');
-        }
-        
         function showStartScreen() {
-            nameScreen.classList.add('hidden');
             startScreen.classList.remove('hidden');
             gameOverScreen.classList.add('hidden');
             leaderboardScreen.classList.add('hidden');
         }
         
         function showLeaderboard() {
-            nameScreen.classList.add('hidden');
             startScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
             leaderboardScreen.classList.remove('hidden');
@@ -251,6 +231,9 @@
         function hideLeaderboard() {
             showStartScreen();
         }
+        
+        // Name input event listener
+        playerNameInput.addEventListener('input', savePlayerName);
         
         // Leaderboard functions
         async function submitScore(name, score) {
