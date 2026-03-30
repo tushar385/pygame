@@ -380,7 +380,7 @@ function handleTap(e) {
 
 function doStart() {
     const n = nameInputEl.value.trim();
-    playerName = n.length > 0 ? n : 'Player';
+    playerName = n.length > 0 ? n : 'Player_' + Math.floor(1000 + Math.random() * 9000);
     startGame();
 }
 
