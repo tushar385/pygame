@@ -751,13 +751,19 @@
             if (isMobile) {
                 ctx.save();
                 
-                // Center game on mobile screen
+                // Calculate game area to fill screen completely
                 const gameWidth = WIDTH * scaleFactor;
                 const gameHeight = HEIGHT * scaleFactor;
+                
+                // Center game perfectly - no empty space
                 const offsetX = (canvas.width - gameWidth) / 2;
                 const offsetY = (canvas.height - gameHeight) / 2;
                 
+                // Apply translation to center
                 ctx.translate(offsetX, offsetY);
+                
+                console.log(`🎮 Game positioned at: ${offsetX}, ${offsetY}`);
+                console.log(`📐 Game area: ${gameWidth}x${gameHeight} on canvas: ${canvas.width}x${canvas.height}`);
             }
             
             // Slower gravity for first 2 seconds (120 frames at 60fps)
