@@ -243,9 +243,6 @@
             showStartScreen();
         }
         
-        // Name input event listener
-        playerNameInput.addEventListener('input', savePlayerName);
-        
         // Leaderboard functions
         async function submitScore(name, score) {
             try {
@@ -415,11 +412,11 @@
             startImg.onerror = () => console.error('Failed to load start.png');
             gameOverImg.onerror = () => console.error('Failed to load image.png');
             
-            // Load images from GitHub repository
-            faceImg.src = 'https://raw.githubusercontent.com/tushar385/pygame_msd/main/face.png';
-            trophyImg.src = 'https://raw.githubusercontent.com/tushar385/pygame_msd/main/trophy.png';
-            startImg.src = 'https://raw.githubusercontent.com/tushar385/pygame_msd/main/start.png';
-            gameOverImg.src = 'https://raw.githubusercontent.com/tushar385/pygame_msd/main/image.png';
+            // Load images from relative paths (working before)
+            faceImg.src = 'face.png';
+            trophyImg.src = 'trophy.png';
+            startImg.src = 'start.png';
+            gameOverImg.src = 'image.png';
         }
         
         // Audio
@@ -428,15 +425,15 @@
         
         function loadAudio() {
             jumpAudio = new Audio();
-            jumpAudio.src = 'https://raw.githubusercontent.com/tushar385/pygame_msd/main/ek_chakke_ne_world_cup.mp3';
+            jumpAudio.src = 'ek_chakke_ne_world_cup.mp3';
             jumpAudio.volume = 1.0;
             
             gameOverAudio = new Audio();
-            gameOverAudio.src = 'https://raw.githubusercontent.com/tushar385/pygame_msd/main/ek_chakke_ne_world_cup.mp3';
+            gameOverAudio.src = 'ek_chakke_ne_world_cup.mp3';
             gameOverAudio.volume = 1.0;
             
             backgroundMusic = new Audio();
-            backgroundMusic.src = 'https://raw.githubusercontent.com/tushar385/pygame_msd/main/Bole%20Jo%20Koyal%20Bago%20Mein%20Tik%20Tok%20-%2064Kbps-(Mr-Jat.in).mp3';
+            backgroundMusic.src = 'Bole Jo Koyal Bago Mein Tik Tok - 64Kbps-(Mr-Jat.in).mp3';
             backgroundMusic.volume = 0.7;
             backgroundMusic.loop = true;
             
@@ -726,6 +723,7 @@
         loadImages();
         loadAudio();
         loadPlayerName();
+        playerNameInput.addEventListener('input', savePlayerName);
         
         console.log('🏏 Flappy Dhoni Mobile Game Loaded - Ready to Play!');
     </script>
