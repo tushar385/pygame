@@ -474,13 +474,29 @@
         function updateScaleFactor() {
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
-                // Better scaling for mobile - use more of the screen
-                const widthRatio = window.innerWidth / WIDTH;
-                const heightRatio = window.innerHeight / HEIGHT;
-                scaleFactor = Math.max(widthRatio, heightRatio) * 0.9; // Use 90% of max dimension
+                // Mobile: Fill screen completely, adjust game dimensions
+                const screenWidth = window.innerWidth;
+                const screenHeight = window.innerHeight;
+                
+                // Calculate scale to fit screen perfectly
+                const scaleX = screenWidth / WIDTH;
+                const scaleY = screenHeight / HEIGHT;
+                
+                // Use the larger scale to fill more screen
+                scaleFactor = Math.max(scaleX, scaleY);
+                
+                // Adjust game dimensions for mobile
+                if (scaleX > scaleY) {
+                    // Width is limiting factor
+                    scaleFactor = scaleX * 0.95; // Use 95% of width
+                } else {
+                    // Height is limiting factor
+                    scaleFactor = scaleY * 0.95; // Use 95% of height
+                }
                 
                 console.log(`📱 Mobile scale factor: ${scaleFactor.toFixed(2)}`);
-                console.log(`📐 Screen: ${window.innerWidth}x${window.innerHeight} vs Game: ${WIDTH}x${HEIGHT}`);
+                console.log(`📐 Screen: ${screenWidth}x${screenHeight} vs Game: ${WIDTH}x${HEIGHT}`);
+                console.log(`📏 Scale ratios - X: ${scaleX.toFixed(2)}, Y: ${scaleY.toFixed(2)}`);
             } else {
                 scaleFactor = 1;
                 console.log(`🖥️ Desktop scale factor: ${scaleFactor}`);
@@ -726,6 +742,20 @@
             ctx.fillStyle = YELLOW;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
+            // Save context for mobile centering
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                ctx.save();
+                
+                // Center game on mobile screen
+                const gameWidth = WIDTH * scaleFactor;
+                const gameHeight = HEIGHT * scaleFactor;
+                const offsetX = (canvas.width - gameWidth) / 2;
+                const offsetY = (canvas.height - gameHeight) / 2;
+                
+                ctx.translate(offsetX, offsetY);
+            }
+            
             // Slower gravity for first 2 seconds (120 frames at 60fps)
             const gameAge = frameCount;
             const gravityMultiplier = gameAge < 120 ? 0.3 : 1.0; // 30% gravity for first 2 seconds
@@ -776,13 +806,15 @@
             }
             
             // Better mobile score positioning
-            const isMobile = window.innerWidth <= 768;
             if (isMobile) {
+                // Restore context before drawing score
+                ctx.restore();
+                
                 // Center score on mobile, make it bigger
                 ctx.fillStyle = BLACK;
-                ctx.font = `bold ${60 * scaleFactor}px Arial`;
+                ctx.font = `bold ${80 * scaleFactor}px Arial`;
                 ctx.textAlign = 'center';
-                ctx.fillText(score.toString(), canvas.width / 2, 80 * scaleFactor);
+                ctx.fillText(score.toString(), canvas.width / 2, 100 * scaleFactor);
             } else {
                 // Desktop positioning
                 ctx.fillStyle = BLACK;
