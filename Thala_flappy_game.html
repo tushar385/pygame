@@ -28,7 +28,7 @@
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.85);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -36,13 +36,15 @@
             color: white;
             text-align: center;
             z-index: 10;
+            overflow-y: auto;
+            padding: 16px;
         }
         .start-screen h1, .game-over-screen h1 {
             font-size: 2.5em;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
-        .start-screen p, .game-over-screen p { font-size: 1.2em; margin: 10px 0; }
+        .start-screen p, .game-over-screen p { font-size: 1.2em; margin: 6px 0; }
         .btn {
             background: #4CAF50;
             border: none;
@@ -51,13 +53,47 @@
             font-size: 1.2em;
             border-radius: 25px;
             cursor: pointer;
-            margin: 10px;
+            margin: 8px;
             transition: all 0.3s;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         .btn:hover { background: #45a049; transform: translateY(-2px); }
         .btn:active { transform: translateY(0); }
         .hidden { display: none !important; }
+        #nameInput {
+            padding: 10px 18px;
+            font-size: 1.1em;
+            border-radius: 20px;
+            border: 2px solid #ffdf00;
+            outline: none;
+            margin: 8px;
+            text-align: center;
+            width: 220px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .leaderboard {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,223,0,0.4);
+            border-radius: 14px;
+            padding: 12px 20px;
+            margin: 10px 0;
+            width: 280px;
+        }
+        .leaderboard h2 { font-size: 1.1em; color: #ffdf00; margin-bottom: 8px; letter-spacing: 1px; }
+        .lb-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 2px;
+            font-size: 0.95em;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .lb-row:last-child { border-bottom: none; }
+        .lb-rank { color: #ffdf00; font-weight: bold; width: 28px; }
+        .lb-name { flex: 1; text-align: left; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-score { font-weight: bold; color: #7fff7f; }
+        .lb-empty { color: #888; font-size: 0.9em; padding: 6px 0; }
         @media (max-width: 768px) {
             .start-screen h1, .game-over-screen h1 { font-size: 2em; }
             .btn { padding: 12px 25px; font-size: 1.1em; }
@@ -68,31 +104,101 @@
 
 <canvas id="gameCanvas"></canvas>
 
-<!-- START SCREEN — original -->
+<!-- START SCREEN -->
 <div class="start-screen" id="startScreen">
     <h1>🏏 Flappy Dhoni</h1>
-    <img src="start.png" alt="Start" style="width:200px;height:150px;margin:20px;border:2px solid #000;border-radius:10px;">
-    <p>Tap to Start Playing!</p>
-    <div style="color:#fff;font-size:0.9em;margin:10px 0;">Tap anywhere to jump</div>
+    <img src="start.png" alt="Start" style="width:180px;height:135px;margin:12px;border:2px solid #000;border-radius:10px;">
+    <p>Enter your name to play!</p>
+    <input type="text" id="nameInput" placeholder="Your name..." maxlength="16" autocomplete="off">
+    <button class="btn" id="startBtn">▶ Start Playing!</button>
+    <div style="color:#aaa;font-size:0.85em;margin-top:4px;">Tap anywhere to jump</div>
+    <div class="leaderboard" id="startLeaderboard">
+        <h2>🏆 Top Players</h2>
+        <div class="lb-empty">Loading...</div>
+    </div>
 </div>
 
-<!-- GAME OVER SCREEN — original -->
+<!-- GAME OVER SCREEN -->
 <div class="game-over-screen hidden" id="gameOverScreen">
-    <img src="image.png" alt="Game Over" style="width:300px;height:200px;margin:20px;border:2px solid #000;border-radius:10px;">
+    <img src="image.png" alt="Game Over" style="width:260px;height:175px;margin:12px;border:2px solid #000;border-radius:10px;">
     <h1>GAME OVER!</h1>
     <p id="finalScore">Score: 0</p>
-    <button class="btn" id="restartBtn">Tap to Restart</button>
-    <div style="color:#fff;font-size:0.9em;">Tap anywhere to restart</div>
+    <p id="personalBest" style="color:#ffdf00;font-size:1em;"></p>
+    <div class="leaderboard" id="gameOverLeaderboard">
+        <h2>🏆 Top Players</h2>
+        <div class="lb-empty">Loading...</div>
+    </div>
+    <button class="btn" id="restartBtn">▶ Play Again</button>
+    <div style="color:#aaa;font-size:0.85em;">Tap anywhere to restart</div>
 </div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const startScreen    = document.getElementById('startScreen');
-const gameOverScreen = document.getElementById('gameOverScreen');
-const finalScoreEl   = document.getElementById('finalScore');
+// ── Firebase REST API (no SDK needed) ─────────────────────────────────────────
+const FB_PROJECT = "flappy-dhoni-game";
+const FB_BASE    = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents`;
+
+async function getLeaderboard() {
+    try {
+        const url = `${FB_BASE}/leaderboard?pageSize=10&orderBy=score+desc`;
+        const res = await fetch(url);
+        if (!res.ok) return [];
+        const data = await res.json();
+        if (!data.documents) return [];
+        return data.documents.map(d => ({
+            name:  d.fields.name.stringValue,
+            score: parseInt(d.fields.score.integerValue || d.fields.score.doubleValue || 0)
+        })).sort((a,b) => b.score - a.score);
+    } catch(e) { console.error("LB fetch:", e); return []; }
+}
+
+async function saveScore(name, score) {
+    try {
+        const key = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        // First check existing score
+        const getRes = await fetch(`${FB_BASE}/leaderboard/${key}`);
+        if (getRes.ok) {
+            const existing = await getRes.json();
+            const oldScore = parseInt(existing.fields?.score?.integerValue || 0);
+            if (oldScore >= score) return; // don't overwrite better score
+        }
+        // Save/update with PATCH
+        const url = `${FB_BASE}/leaderboard/${key}?updateMask.fieldPaths=name&updateMask.fieldPaths=score&updateMask.fieldPaths=updatedAt`;
+        await fetch(url, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fields: {
+                    name:      { stringValue: name },
+                    score:     { integerValue: score },
+                    updatedAt: { integerValue: Date.now() }
+                }
+            })
+        });
+    } catch(e) { console.error("Save score:", e); }
+}
+
+function renderLeaderboard(elId, lb, highlightName) {
+    const el = document.getElementById(elId);
+    if (!lb || lb.length === 0) {
+        el.innerHTML = '<h2>🏆 Top Players</h2><div class="lb-empty">No scores yet — be the first!</div>';
+        return;
+    }
+    const medals = ['🥇','🥈','🥉'];
+    let html = '<h2>🏆 Top Players</h2>';
+    lb.forEach((entry, i) => {
+        const isMe = highlightName && entry.name.toLowerCase() === highlightName.toLowerCase();
+        html += `<div class="lb-row" style="${isMe ? 'background:rgba(255,223,0,0.18);border-radius:6px;' : ''}">
+            <span class="lb-rank">${medals[i] || (i+1)+'.'}</span>
+            <span class="lb-name">${entry.name}</span>
+            <span class="lb-score">${entry.score}</span>
+        </div>`;
+    });
+    el.innerHTML = html;
+}
 
 // ── Canvas / scale ────────────────────────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
 const VW = 420, VH = 700;
 let scale = 1;
 function resize() {
@@ -106,7 +212,7 @@ window.addEventListener('resize', resize);
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const PIPE_W   = 70;
-const GAP      = 260;   // vertical gap between top & bottom pipe
+const GAP      = 260;
 const PIPE_SPD = 2.3;
 const GRAVITY  = 0.5;
 const JUMP_V   = -7.0;
@@ -116,10 +222,18 @@ const GROUND_H = 30;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let gameStarted = false, gameOver = false;
-let score = 0, highScore = 0, frameCount = 0;
+let score = 0, frameCount = 0;
 let gameOverTime = 0, raf = null;
 let py = VH / 2, vy = 0;
 let pipes = [], passedPipes = [];
+let playerName = 'Player';
+let localBest  = 0;
+
+const startScreen    = document.getElementById('startScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const finalScoreEl   = document.getElementById('finalScore');
+const personalBestEl = document.getElementById('personalBest');
+const nameInputEl    = document.getElementById('nameInput');
 
 // ── Images ────────────────────────────────────────────────────────────────────
 const faceImg   = new Image(); faceImg.src   = 'face.png';
@@ -129,9 +243,9 @@ const trophyImg = new Image(); trophyImg.src = 'trophy.png';
 let jumpAudio, gameOverAudio, bgMusic, audioReady = false;
 function loadAudio() {
     try {
-        jumpAudio    = new Audio('ek_chakke_ne_world_cup.mp3');    jumpAudio.volume = 1.0;
-        gameOverAudio= new Audio('ek_chakke_ne_world_cup.mp3');    gameOverAudio.volume = 0.8;
-        bgMusic      = new Audio('Bole Jo Koyal Bago Mein Tik Tok - 64Kbps-(Mr-Jat.in).mp3');
+        jumpAudio     = new Audio('ek_chakke_ne_world_cup.mp3'); jumpAudio.volume = 1.0;
+        gameOverAudio = new Audio('ek_chakke_ne_world_cup.mp3'); gameOverAudio.volume = 0.8;
+        bgMusic       = new Audio('Bole Jo Koyal Bago Mein Tik Tok - 64Kbps-(Mr-Jat.in).mp3');
         bgMusic.volume = 0.3; bgMusic.loop = true;
         jumpAudio.addEventListener('canplaythrough', () => audioReady = true);
     } catch(e) {}
@@ -153,44 +267,30 @@ function playBg() {
 }
 function stopBg() { bgMusic && bgMusic.pause(); }
 
-// ── Pipe spawn — exact original logic ────────────────────────────────────────
-// gap_y = where the opening starts; top pipe = 0→gap_y, bottom = gap_y+GAP→bottom
+// ── Pipes ─────────────────────────────────────────────────────────────────────
 function spawnPipe() {
-    const gap_y = Math.random() * (VH - 400) + 130;
-    // 50% chance: stagger top & bottom pipe on X axis by 40–120px
+    const gap_y   = Math.random() * (VH - 400) + 130;
     const stagger = Math.random() < 0.5 ? Math.random() * 80 + 40 : 0;
     pipes.push({ x: VW, gap_y, stagger });
 }
 
 // ── Draw ──────────────────────────────────────────────────────────────────────
 function drawBg() {
-    ctx.fillStyle = '#ffdf00';
-    ctx.fillRect(0, 0, VW, VH);
-    ctx.fillStyle = '#008000';
-    ctx.fillRect(0, VH - GROUND_H, VW, GROUND_H);
-    ctx.fillStyle = '#006400';
-    ctx.fillRect(0, VH - GROUND_H, VW, 4);
+    ctx.fillStyle = '#ffdf00'; ctx.fillRect(0, 0, VW, VH);
+    ctx.fillStyle = '#008000'; ctx.fillRect(0, VH - GROUND_H, VW, GROUND_H);
+    ctx.fillStyle = '#006400'; ctx.fillRect(0, VH - GROUND_H, VW, 4);
 }
 
 function drawPipes() {
     for (const p of pipes) {
         const { x, gap_y, stagger } = p;
-        const topX = x;
-        const botX = x + (stagger || 0);
-        const botY = gap_y + GAP;
-        const botH = VH - GROUND_H - botY;
-
-        ctx.fillStyle   = '#008000';
-        ctx.strokeStyle = '#006400';
-        ctx.lineWidth   = 3;
-
-        // Top pipe
+        const topX = x, botX = x + (stagger || 0);
+        const botY = gap_y + GAP, botH = VH - GROUND_H - botY;
+        ctx.fillStyle = '#008000'; ctx.strokeStyle = '#006400'; ctx.lineWidth = 3;
         ctx.fillRect(topX, 0, PIPE_W, gap_y);
         ctx.strokeRect(topX, 0, PIPE_W, gap_y);
         if (gap_y > 40 && trophyImg.complete && trophyImg.naturalWidth > 0)
             ctx.drawImage(trophyImg, topX, gap_y - 70, 70, 70);
-
-        // Bottom pipe (staggered)
         ctx.fillRect(botX, botY, PIPE_W, botH);
         ctx.strokeRect(botX, botY, PIPE_W, botH);
         if (botH > 40 && trophyImg.complete && trophyImg.naturalWidth > 0)
@@ -202,8 +302,7 @@ function drawPlayer() {
     if (faceImg.complete && faceImg.naturalWidth > 0) {
         ctx.drawImage(faceImg, PL_X, py, PL_W, PL_H);
     } else {
-        ctx.fillStyle = '#ffe066';
-        ctx.fillRect(PL_X, py, PL_W, PL_H);
+        ctx.fillStyle = '#ffe066'; ctx.fillRect(PL_X, py, PL_W, PL_H);
         ctx.fillStyle = '#222'; ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('MSD', PL_X + PL_W/2, py + PL_H/2);
@@ -211,23 +310,19 @@ function drawPlayer() {
 }
 
 function drawScore() {
-    ctx.fillStyle = '#000';
-    ctx.font = 'bold 50px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(score.toString(), VW / 2, 55);
+    ctx.fillStyle = '#000'; ctx.font = 'bold 50px Arial';
+    ctx.textAlign = 'center'; ctx.fillText(score.toString(), VW / 2, 55);
 }
 
 // ── Collision ─────────────────────────────────────────────────────────────────
 function checkCollision() {
     const pad = 6;
-    const x1 = PL_X + pad, y1 = py + pad;
-    const x2 = PL_X + PL_W - pad, y2 = py + PL_H - pad;
+    const x1 = PL_X+pad, y1 = py+pad, x2 = PL_X+PL_W-pad, y2 = py+PL_H-pad;
     if (y1 < 0 || y2 > VH - GROUND_H) return true;
     for (const p of pipes) {
-    if (x2 > p.x && x1 < p.x + PIPE_W && y1 < p.gap_y) return true; // top pipe
-        const botX = p.x + (p.stagger || 0);
-        const botY = p.gap_y + GAP;
-        if (x2 > botX && x1 < botX + PIPE_W && y2 > botY) return true; // bottom pipe
+        if (x2 > p.x && x1 < p.x + PIPE_W && y1 < p.gap_y) return true;
+        const botX = p.x + (p.stagger||0), botY = p.gap_y + GAP;
+        if (x2 > botX && x1 < botX + PIPE_W && y2 > botY) return true;
     }
     return false;
 }
@@ -235,64 +330,58 @@ function checkCollision() {
 // ── Game loop ─────────────────────────────────────────────────────────────────
 function gameLoop() {
     if (!gameStarted || gameOver) return;
-
-    // Gravity — slow for first 2 sec
     const gMult = frameCount < 120 ? 0.3 : 1.0;
-    vy += GRAVITY * gMult;
-    py += vy;
+    vy += GRAVITY * gMult; py += vy;
 
-    // Spawn pipes
     if (frameCount === 30) spawnPipe();
     else if (frameCount > 30 && (frameCount - 30) % 90 === 0) spawnPipe();
 
-    // Move pipes
     for (const p of pipes) p.x -= PIPE_SPD;
     pipes = pipes.filter(p => p.x + PIPE_W > -10);
 
-    // Draw
-    drawBg();
-    drawPipes();
-    drawPlayer();
-    drawScore();
+    drawBg(); drawPipes(); drawPlayer(); drawScore();
 
-    // Score
     for (const p of pipes) {
         if (p.x + PIPE_W < PL_X && !passedPipes.includes(p)) {
-            score += 2;
-            passedPipes.push(p);
+            score += 2; passedPipes.push(p);
         }
     }
 
-    // Collision
     if (checkCollision()) {
-        gameOver = true;
-        stopBg(); playGameOver();
-        finalScoreEl.textContent = `Score: ${score}`;
-        gameOverScreen.classList.remove('hidden');
-        gameOverTime = Date.now();
-        return;
+        gameOver = true; stopBg(); playGameOver();
+        handleGameOver(); return;
     }
-
     frameCount++;
     raf = requestAnimationFrame(gameLoop);
 }
 
-// ── Controls ──────────────────────────────────────────────────────────────────
-function jump() {
-    if (gameStarted && !gameOver) { vy = JUMP_V; playJump(); }
+async function handleGameOver() {
+    if (score > localBest) localBest = score;
+    finalScoreEl.textContent   = `Score: ${score}`;
+    personalBestEl.textContent = `Your Best: ${localBest}`;
+    gameOverScreen.classList.remove('hidden');
+    gameOverTime = Date.now();
+    await saveScore(playerName, score);
+    const lb = await getLeaderboard();
+    renderLeaderboard('gameOverLeaderboard', lb, playerName);
 }
 
-function handleTap(e) {
-    const touchY = e.touches ? e.touches[0].clientY : e.clientY;
-    const isBottom = touchY > window.innerHeight / 2;
+// ── Controls ──────────────────────────────────────────────────────────────────
+function jump() { if (gameStarted && !gameOver) { vy = JUMP_V; playJump(); } }
 
-    if (!gameStarted && !gameOver) {
-        startGame();
-    } else if (gameStarted && !gameOver) {
-        jump();
-    } else if (gameOver) {
-        if (Date.now() - gameOverTime >= 2000 || isBottom) restartGame();
-    }
+function handleTap(e) {
+    if (e.target && ['INPUT','BUTTON'].includes(e.target.tagName)) return;
+    const touchY   = e.touches ? e.touches[0].clientY : e.clientY;
+    const isBottom = touchY > window.innerHeight / 2;
+    if (!gameStarted && !gameOver)     doStart();
+    else if (gameStarted && !gameOver) jump();
+    else if (gameOver && (Date.now() - gameOverTime >= 2000 || isBottom)) restartGame();
+}
+
+function doStart() {
+    const n = nameInputEl.value.trim();
+    playerName = n.length > 0 ? n : 'Player';
+    startGame();
 }
 
 function startGame() {
@@ -309,22 +398,24 @@ function startGame() {
 
 function restartGame() { startGame(); }
 
+document.getElementById('startBtn').addEventListener('click',  e => { e.stopPropagation(); doStart(); });
+document.getElementById('restartBtn').addEventListener('click', e => { e.stopPropagation(); restartGame(); });
 canvas.addEventListener('click', handleTap);
 canvas.addEventListener('touchstart', e => { if (gameStarted) { e.preventDefault(); handleTap(e); } }, { passive: false });
 startScreen.addEventListener('touchstart', e => {
     if (['IMG','P','H1','DIV'].includes(e.target.tagName)) { e.preventDefault(); handleTap(e); }
 });
-document.getElementById('restartBtn').addEventListener('click', e => { e.stopPropagation(); restartGame(); });
 document.addEventListener('touchmove', e => { if (gameStarted) e.preventDefault(); }, { passive: false });
 document.addEventListener('keydown', e => {
     if (e.code === 'Space') { e.preventDefault(); handleTap(e); }
     if (e.code === 'KeyR' && gameOver) restartGame();
 });
+nameInputEl.addEventListener('keydown', e => { if (e.code === 'Enter') doStart(); });
 
 loadAudio();
-// Draw idle background while on start screen
 (function idleDraw() { if (!gameStarted) { drawBg(); requestAnimationFrame(idleDraw); } })();
-console.log('🏏 Flappy Dhoni — ready!');
+getLeaderboard().then(lb => renderLeaderboard('startLeaderboard', lb, null));
+console.log('🏏 Flappy Dhoni — Firebase REST ready!');
 </script>
 </body>
 </html>
