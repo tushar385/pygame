@@ -478,22 +478,37 @@
                 const screenWidth = window.innerWidth;
                 const screenHeight = window.innerHeight;
                 
+                // Detect orientation
+                const isPortrait = screenHeight > screenWidth;
+                
                 // Calculate scale to fit screen perfectly
                 const scaleX = screenWidth / WIDTH;
                 const scaleY = screenHeight / HEIGHT;
                 
-                // For smaller screens like Realme, use more aggressive scaling
-                const isSmallScreen = screenWidth <= 400 || screenHeight <= 700;
-                
-                if (isSmallScreen) {
-                    // Small phones: Use maximum possible scale
-                    scaleFactor = Math.max(scaleX, scaleY) * 1.2; // 120% for small screens
+                if (isPortrait) {
+                    // Portrait mode: Optimize for vertical screens
+                    const isSmallScreen = screenWidth <= 400 || screenHeight <= 700;
+                    
+                    if (isSmallScreen) {
+                        // Small portrait phones like Realme: Use full height, scale width
+                        scaleFactor = (screenHeight / HEIGHT) * 0.85; // Use 85% of height
+                    } else {
+                        // Larger portrait phones: Normal scaling
+                        scaleFactor = Math.min(scaleX, scaleY) * 0.9; // Fit within screen
+                    }
                 } else {
-                    // Larger phones: Use normal scaling
-                    scaleFactor = Math.max(scaleX, scaleY) * 0.95; // 95% for larger screens
+                    // Landscape mode: Use existing logic
+                    const isSmallScreen = screenWidth <= 400 || screenHeight <= 700;
+                    
+                    if (isSmallScreen) {
+                        scaleFactor = Math.max(scaleX, scaleY) * 1.2;
+                    } else {
+                        scaleFactor = Math.max(scaleX, scaleY) * 0.95;
+                    }
                 }
                 
-                console.log(`📱 ${isSmallScreen ? 'Small' : 'Large'} screen detected`);
+                console.log(`📱 ${isPortrait ? 'Portrait' : 'Landscape'} mode`);
+                console.log(`📱 ${isPortrait && (screenWidth <= 400 || screenHeight <= 700) ? 'Small' : 'Large'} screen detected`);
                 console.log(`📱 Mobile scale factor: ${scaleFactor.toFixed(2)}`);
                 console.log(`📐 Screen: ${screenWidth}x${screenHeight} vs Game: ${WIDTH}x${HEIGHT}`);
                 console.log(`📏 Scale ratios - X: ${scaleX.toFixed(2)}, Y: ${scaleY.toFixed(2)}`);
